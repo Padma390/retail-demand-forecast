@@ -1,201 +1,205 @@
-**Retail Demand Forecasting & Inventory Optimization**
+# Retail Demand Forecasting & Inventory Optimization
 
-**Executive Summary:**
+## Executive Summary
+
 This project builds an end-to-end machine learning pipeline to:
 
-* Forecast next 7 days of sales at store-item level
-* Optimize inventory using safety stock & reorder point logic
-* Generate automated restocking alerts
+* forecast the next 7 days of sales at the store-item level,
+* optimize inventory using safety stock and reorder point logic,
+* generate automated restocking alerts.
 
+The final solution improves forecasting accuracy by about **30% over a baseline model** and connects predictions directly to inventory decisions. It also includes a **fallback mechanism** that uses forecasted values when the latest actual sales data is unavailable, allowing weekly forecasting to continue without interruption. 
 
-The system reduces forecasting error by ~30% over baseline and connects predictions directly to business inventory decisions.
-The pipeline also includes a production-ready fallback mechanism to handle missing real-time sales data using forecasted values
+## Business Problem
 
-**Business Problem:**
 Retail chains face two major risks:
-    Stockouts → Lost sales & customer dissatisfaction
-    Overstocking → High holding cost & capital lock-in
 
-Requirement
-    Accurate short-term demand forecasts
-    A data-driven reorder strategy
+* **Stockouts** → lost sales and poor customer experience
+* **Overstocking** → higher holding cost and locked working capital
 
+To address this, businesses need:
 
-This project solves both problems in one integrated pipeline.
+* accurate short-term demand forecasts,
+* a data-driven reorder strategy.
 
+This project solves both in one integrated workflow. 
 
-**Solution Approach:**
+## Solution Overview
 
-The solution consists of two major components:
-    Demand Forecasting (ML-based)
-    Inventory Optimization (rule + statistical approach)
+The solution has two main components:
 
-Methodology
+1. **Demand Forecasting** using machine learning
+2. **Inventory Optimization** using statistical and rule-based logic
 
-1. Data Preprocessing
+## Methodology
 
-    * Converted date column to datetime format
-    * Sorted data by store, item, and date
-    * Applied log transformation to stabilize variance
+### 1. Data Preprocessing
 
-2. Feature Engineering
+* Converted the date column to datetime format
+* Sorted data by store, item, and date
+* Applied log transformation to stabilize variance
 
-Time-Based Features
-    1. Day of week
-    2. Week of year
-    3. Month
+### 2. Feature Engineering
 
-Lag Features
-    1. Lag 1 (previous day)
-    2. Lag 7 (previous week)
-    3. Lag 14 (two weeks prior)
+#### Time-Based Features
 
-Rolling Statistics
-    1. 7-day rolling mean
-    2. 14-day rolling mean
-    3. 28-day rolling mean
-    4. 7-day rolling standard deviation
+* day of week
+* week of year
+* month
 
-These features capture:
-    * seasonality
-    * short-term trends
-    * demand variability
+#### Lag Features
 
+* lag 1
+* lag 7
+* lag 14
 
-**Model Selection**
-**Models Evaluated:**
+#### Rolling Statistics
 
-* Naive Baseline (Lag-7)
-* Linear Regression
-* Random Forest Regressor
-* XGBoost
+* 7-day rolling mean
+* 14-day rolling mean
+* 28-day rolling mean
+* 7-day rolling standard deviation
 
+These features help capture:
 
-**1. Naive Baseline (Lag-7)**
+* seasonality,
+* recent demand trends,
+* demand variability. 
 
-* Uses previous week demand
-* Captures weekly seasonality
+## Models Evaluated
 
-Limitation:
-    Cannot capture trends or complex patterns
+### 1. Naive Baseline (Lag-7)
 
-**2. Linear Regression**
+Uses previous week’s demand as the prediction.
 
-* Assumes linear relationships
-* Uses engineered lag & rolling features
+**Strength:** captures weekly seasonality
+**Limitation:** cannot capture trends or nonlinear patterns
 
-Limitation:
-    Cannot capture nonlinear demand patterns
+### 2. Linear Regression
 
-**3. Random Forest**
+Uses engineered lag and rolling features in a linear model.
 
-* Captures nonlinear relationships
-* Handles feature interactions
-* Robust to noise
+**Strength:** simple and interpretable
+**Limitation:** struggles with nonlinear demand behavior
 
-**Result:**
-    Significant improvement over Linear Regression
+### 3. Random Forest Regressor
 
-**4. XGBoost (Final Model)**
+Captures nonlinear relationships and feature interactions.
 
-* Gradient boosting model
-* Sequentially learns residual errors
-* Captures complex nonlinear patterns
+**Strength:** robust and better at modeling complex patterns
+**Result:** significant improvement over Linear Regression
 
-**Result:**
-    Best performance among all models
+### 4. XGBoost (Final Model)
 
-Model Performance (Actual Scale)
+A gradient boosting model that sequentially learns residual errors.
 
-* Baseline RMSE → 11.63
-* Linear Regression RMSE → 8.61
-* Random Forest RMSE → 8.33
-* XGBoost RMSE → ~8.1 (best)
+**Strength:** strong performance on structured tabular data
+**Result:** best performance among all evaluated models 
 
-~30% improvement over baseline
+## Model Performance
 
-Final Model Selected: XGBoost
+### RMSE on Actual Scale
 
-**Model Interpretability (SHAP)**
+* **Baseline:** 11.63
+* **Linear Regression:** 8.61
+* **Random Forest:** 8.33
+* **XGBoost:** ~8.1
 
-    SHAP analysis was used to interpret the XGBoost model.
+This represents an improvement of approximately **30% over the baseline**.
 
-**Key Insights:**
+**Final model selected:** XGBoost. 
 
-* Rolling mean features (roll_mean_7, roll_mean_14, roll_mean_28) had highest impact
-* Demand is driven more by recent trends than raw lag values
-* Higher rolling averages → higher predicted demand
-* Calendar features had minimal impact
+## Model Interpretability
 
-**Conclusion:**
-    Demand forecasting depends heavily on smoothed recent behavior
+SHAP was used to interpret the XGBoost model.
 
-**7-Day Recursive Forecasting**
-**Forecasting strategy:**
+### Key Insights
 
-* Use latest 14-day history
-* Predict day 1
-* Append prediction to history
-* Recalculate rolling features
-* Repeat for 7 days
+* Rolling mean features (`roll_mean_7`, `roll_mean_14`, `roll_mean_28`) had the highest impact
+* Demand was influenced more by recent smoothed trends than by raw lag values
+* Higher rolling averages generally led to higher predicted demand
+* Calendar features had relatively low impact
 
-This mimics real-world deployment where future actuals are unknown.
+This suggests that recent demand behavior is more important than simple date-based effects in this use case. 
 
-**Inventory Optimization Logic**
+## 7-Day Recursive Forecasting
 
-* Lead Time Demand
-* Sum of predicted demand over lead time
-* Safety Stock
+The forecasting pipeline uses a recursive strategy:
 
-Safety Stock = Z × Demand Std Dev × √Lead Time
+1. Take the latest available history
+2. Predict day 1
+3. Append the prediction to history
+4. Recompute lag and rolling features
+5. Repeat for the next 7 days
+
+This simulates real-world forecasting, where actual future sales are not yet known. 
+
+## Inventory Optimization Logic
+
+### Lead Time Demand
+
+Lead Time Demand is calculated as the sum of predicted demand over the lead time.
+
+### Safety Stock
+
+[
+\text{Safety Stock} = Z \times \sigma_d \times \sqrt{\text{Lead Time}}
+]
+
 Where:
-Z = 1.65 (95% service level)
 
-Demand std dev from historical actual sales
+* ( Z = 1.65 ) for a 95% service level
+* ( \sigma_d ) = standard deviation of historical demand
 
-Reorder Point
-    Reorder Point = Lead Time Demand + Safety Stock
+### Reorder Point
 
-Decision Rule
+[
+\text{Reorder Point} = \text{Lead Time Demand} + \text{Safety Stock}
+]
+
+### Decision Rule
 
 If:
-Current Inventory < Reorder Point
-→ Generate Reorder Alert
+
+**Current Inventory < Reorder Point**
+
+→ generate a reorder alert
+
+This helps reduce stockout risk while keeping inventory decisions data-driven. 
+
+## Production Deployment Logic
+
+The pipeline is designed for a realistic weekly forecasting setup.
+
+* If the latest actual sales data is available, it is used to compute lag and rolling features
+* If the latest actual sales is unavailable, previously forecasted values are used instead
 
 This ensures:
-* Reduced stockouts
-* Controlled inventory risk
-* Business Impact
-* Improved short-term demand prediction
+
+* forecasting can continue even when real-time data is delayed,
+* lag and rolling features can still be computed,
+* the pipeline remains operational in production-like conditions.
+
+**Note:** forecasted values are used only to support ongoing forecasting and are **not** used for model retraining. 
+
+## Business Impact
+
+* Improved short-term demand forecasting accuracy
 * Reduced stockout risk
-* Data-driven inventory decisions
+* More informed inventory planning
 * End-to-end reproducible ML workflow
 
-**Production - Deplyment Logic**
-The forecasting pipeline is designed to operate in real-world setting with continuously updating data
-The model is trained on historical actual sales data
-For weekly forecasting:
-* If latest actual sales are available, they are used to compute features
-* If actual sales are not yet available, previously forecasted values are used
+## Key Learnings
 
-This ensures that:
-* Lag and rolling features can always be computed
-* Forecasting can continue even when real-time data is delayed
+* Feature engineering had a major impact on performance
+* Tree-based models outperformed linear models
+* XGBoost delivered the best predictive accuracy
+* SHAP improved explainability
+* Recursive forecasting better reflects real deployment conditions
 
-Note: Forecasted values are used only for operational continuity and are not used for model retraining
+## Future Improvements
 
-**Key Learnings**
-
-* Feature engineering drives most performance
-* Tree-based models outperform linear models
-* XGBoost provides best predictive performance
-* SHAP improves model explainability
-* Recursive forecasting simulates real deployment
-
-**Future Improvements**
-
-* Add LightGBM / advanced models
-* Time-series cross-validation
-* Add external features (holidays, promotions)
-* Automate model retraining pipeline
-
+* Add LightGBM and other advanced models
+* Use time-series cross-validation
+* Incorporate external signals such as holidays and promotions
+* Automate retraining and deployment pipelines
